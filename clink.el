@@ -210,6 +210,18 @@ if it is the first call, open it and return the object."
 ;;; Commands
 
 ;;;###autoload
+(defun clink-build-database (root-directory)
+  "Build the Clink database under ROOT-DIRECTORY."
+  (interactive "D")
+  (user-error "Not implemented yet"))
+
+;;;###autoload
+(defun clink-update-database (root-directory)
+  "Update the Clink database under ROOT-DIRECTORY."
+  (interactive "D")
+  (user-error "Not implemented yet"))
+
+;;;###autoload
 (defun clink-open-database-dir (&optional root-directory)
   "Find Clink database starting from ROOT-DIRECTORY."
   (interactive)
