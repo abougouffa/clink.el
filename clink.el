@@ -271,6 +271,7 @@ if it is the first call, open it and return the object."
   :group 'clink
   (if clink-mode (clink-turn-on) (clink-turn-off)))
 
+;;;###autoload
 (define-globalized-minor-mode global-clink-mode clink-mode clink-turn-on
   :group 'clink
   :predicate)
