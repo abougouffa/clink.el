@@ -5,7 +5,7 @@
 ;; Author: Abdelhak BOUGOUFFA (rot13 "nobhtbhssn@srqbencebwrpg.bet")
 ;; Maintainer: Abdelhak BOUGOUFFA (rot13 "nobhtbhssn@srqbencebwrpg.bet")
 ;; Created: 2024
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "28.1"))
 ;; Homepage: https://github.com/abougouffa/clink.el
 ;; Keywords: matching, files, completion, languages, c, tools
