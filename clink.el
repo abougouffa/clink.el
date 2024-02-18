@@ -202,6 +202,7 @@ if it is the first call, open it and return the object."
 
 ;;; Commands
 
+;;;###autoload
 (defun clink-open-database-dir (&optional root-directory)
   "Find Clink database starting from ROOT-DIRECTORY."
   (interactive)
@@ -209,6 +210,7 @@ if it is the first call, open it and return the object."
                       (clink--directory-root-containing-file clink-root-project-detection-files root-directory))))
     (dired dir)))
 
+;;;###autoload
 (defun clink-set-database-dir ()
   "Set the Clink database root directory."
   (interactive)
@@ -217,7 +219,14 @@ if it is the first call, open it and return the object."
          (set-dir (read-directory-name "Select database directory: " dir)))
     (setq-local clink-project-root (expand-file-name clink-database-filename set-dir))))
 
-(dolist (cat '(file callers calls reference definition symbol))
+;;;###autoload(autoload 'clink-find-symbol "clink" "Find symbol" t)
+;;;###autoload(autoload 'clink-find-file "clink" "Find file" t)
+;;;###autoload(autoload 'clink-find-callers "clink" "Find callers" t)
+;;;###autoload(autoload 'clink-find-calls "clink" "Find calls" t)
+;;;###autoload(autoload 'clink-find-reference "clink" "Find reference" t)
+;;;###autoload(autoload 'clink-find-definition "clink" "Find definition" t)
+
+(dolist (cat '(symbol file callers calls reference definition))
   (let ((fn-name (intern (format "clink-find-%s" cat)))
         (fn-doc (format "Find %s." cat)))
     (defalias
@@ -248,6 +257,7 @@ if it is the first call, open it and return the object."
 
 ;;; Modes
 
+;;;###autoload
 (define-minor-mode clink-mode
   "Enable Clink integration for the current buffer."
   :lighter " Clink"
