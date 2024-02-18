@@ -83,10 +83,11 @@ See the `:predicate' section of `define-globalized-minor-mode'."
 
 ;;; Utils and internals
 
-(defvar clink-prompt-symbol-history nil
-  "The history of terms we searched for.
+(defvar clink-prompt-symbol-history nil)
 
-This is one common history for ALL search types.")
+(defvar clink-prompt-file-history nil)
+
+(defvar clink-prompt-includers-history nil)
 
 (defvar clink--databases-map (make-hash-table :test 'equal))
 
@@ -105,7 +106,7 @@ if it is the first call, open it and return the object."
             db))
       (error "Database not found %S" db-file))))
 
-(defun clink--show-find-symbol-results (buff-name results template &optional root-dir)
+(defun clink--results-show-in-buffer (buff-name results template &optional root-dir)
   (with-current-buffer (get-buffer-create buff-name)
     (read-only-mode -1)
     (delete-region (point-min) (point-max))
@@ -130,9 +131,21 @@ if it is the first call, open it and return the object."
   "Prompt for a symbol."
   (let ((sym (or (thing-at-point 'region)
                  (thing-at-point 'symbol)
-                 (read-string "Symbol: " (car clink-prompt-symbol-history) clink-prompt-symbol-history))))
-    (add-to-history 'clink-prompt-symbol-history sym)
+                 (read-string "Symbol: " (car clink-prompt-symbol-history) 'clink-prompt-symbol-history))))
+    (add-to-history 'clink-prompt-symbol-history (substring-no-properties sym))
     sym))
+
+(defun clink--prompt-for-file ()
+  "Prompt for a file."
+  (let ((file (or (read-string "File: " nil 'clink-prompt-file-history))))
+    (add-to-history 'clink-prompt-file-history file)
+    file))
+
+(defalias 'clink--prompt-for-definition 'clink--prompt-for-symbol)
+(defalias 'clink--prompt-for-reference 'clink--prompt-for-symbol)
+(defalias 'clink--prompt-for-calls 'clink--prompt-for-symbol)
+(defalias 'clink--prompt-for-callers 'clink--prompt-for-symbol)
+(defalias 'clink--prompt-for-includers 'clink--prompt-for-file)
 
 (defvar clink--queries-plist
   `(:symbol
@@ -150,7 +163,7 @@ if it is the first call, open it and return the object."
               "FROM symbols INNER JOIN records ON symbols.path = records.id "
               "LEFT JOIN content ON records.id = content.path AND "
               "symbols.line = content.line WHERE symbols.name = ? AND " ;; name
-              "symbols.category = 0 ORDER BY "
+              "symbols.category = 0 ORDER BY " ;; 0 -> definition
               "records.path, symbols.line, symbols.col;"))
     :reference
     (:template (path line parent body)
@@ -159,6 +172,15 @@ if it is the first call, open it and return the object."
               "FROM symbols INNER JOIN records ON symbols.path = records.id "
               "LEFT JOIN content ON records.id = content.path AND "
               "symbols.line = content.line WHERE symbols.name = ? AND " ;; name
+              "symbols.category = 2 ORDER BY " ;; 2 -> reference
+              "records.path, symbols.line, symbols.col;"))
+    :includers
+    (:template (path line parent body)
+     :query ,(concat
+              "SELECT records.path, symbols.line, symbols.parent, content.body "
+              "FROM symbols INNER JOIN records ON symbols.path = records.id "
+              "LEFT JOIN content ON records.id = content.path AND "
+              "symbols.line = content.line WHERE symbols.name LIKE ? AND " ;; name
               "symbols.category = 3 ORDER BY "
               "records.path, symbols.line, symbols.col;"))
     :calls
@@ -168,7 +190,7 @@ if it is the first call, open it and return the object."
               "FROM symbols INNER JOIN records ON symbols.path = records.id "
               "LEFT JOIN content ON records.id = content.path AND "
               "symbols.line = content.line WHERE symbols.parent = ? AND " ;; caller
-              "symbols.category = 1 ORDER BY "
+              "symbols.category = 1 ORDER BY " ;; 1 -> function call
               "records.path, symbols.line, symbols.col;"))
     :callers
     (:template (path line parent body)
@@ -245,21 +267,33 @@ if it is the first call, open it and return the object."
 ;;;###autoload(autoload 'clink-find-reference "clink" "Find reference" t)
 ;;;###autoload(autoload 'clink-find-definition "clink" "Find definition" t)
 
-(dolist (cat '(symbol file callers calls reference definition))
-  (let ((fn-name (intern (format "clink-find-%s" cat)))
-        (fn-doc (format "Find %s." cat)))
+(dolist (type '(symbol file callers calls reference definition includers))
+  (let ((fn-name (intern (format "clink-find-%s" type)))
+        (fn-doc (format "Find %s." type))
+        (fn-prompt (intern (format "clink--prompt-for-%s" type))))
     (defalias
       fn-name
       (lambda (arg)
-        (interactive (list (clink--prompt-for-symbol)))
-        (let ((root-dir (file-name-directory clink-project-root))
-              (plist (plist-get clink--queries-plist (intern (format ":%s" cat)))))
-          (clink--show-find-symbol-results
-           (format "*clink-find-%s (%s)*" cat arg)
-           (sqlite-select (clink--get-sqlite-database root-dir) (plist-get plist :query) (vector arg))
-           (plist-get plist :template)
-           root-dir)))
+        (interactive (list (funcall-interactively fn-prompt)))
+        (clink-internal-find type arg))
       fn-doc)))
+
+(defun clink-internal-find (type args)
+  "Find TYPE with ARGS."
+  (let ((root-dir (file-name-directory clink-project-root))
+        (plist (plist-get clink--queries-plist (intern (format ":%s" type))))
+        (args (ensure-list args)))
+    (clink--results-show-in-buffer
+     (format "*clink-find-%s (%s)*" type (car args))
+     (sqlite-select (clink--get-sqlite-database root-dir)
+                    (plist-get plist :query)
+                    (cond ((eq type 'file)
+                           (vector (car args) (concat "%" (car args))))
+                          ((eq type 'includers)
+                           (vector (concat "%" (car args))))
+                          (t (vector (car args)))))
+     (plist-get plist :template)
+     root-dir)))
 
 (defun clink-turn-on ()
   "Setup Clink integration for the current buffer."
