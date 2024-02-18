@@ -137,7 +137,11 @@ if it is the first call, open it and return the object."
 
 (defun clink--prompt-for-file ()
   "Prompt for a file."
-  (let ((file (or (read-string "File: " nil 'clink-prompt-file-history))))
+  (let* ((init (or (thing-at-point 'region) (thing-at-point 'string)))
+         (file (read-string
+                "File: "
+                (and init (string-trim init "[ \\t\\n\\r\"'<{(]+" "[ \\t\\n\\r\"'>})]+"))
+                'clink-prompt-file-history)))
     (add-to-history 'clink-prompt-file-history file)
     file))
 
