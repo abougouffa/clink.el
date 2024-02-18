@@ -68,6 +68,13 @@
   :type '(repeat string)
   :group 'clink)
 
+(defcustom global-clink-modes '(c-mode c-ts-mode c++-mode c++-ts-mode)
+  "A predicate list of major modes to use with `global-clink-mode'.
+
+See the `:predicate' section of `define-globalized-minor-mode'."
+  :group 'clink
+  :type '(repeat symbol))
+
 (defvar-local clink-project-root nil
   "Path to the directory containing Clink database (the `clink-database-filename').")
 
@@ -242,14 +249,14 @@ if it is the first call, open it and return the object."
            root-dir)))
       fn-doc)))
 
-(defun clink-setup ()
+(defun clink-turn-on ()
   "Setup Clink integration for the current buffer."
   (when-let* ((root (clink-find-project-root))
               (clink-db (expand-file-name clink-database-filename root))
               (db-exists (file-exists-p clink-db)))
     (setq-local clink-project-root clink-db)))
 
-(defun clink-teardown ()
+(defun clink-turn-off ()
   "Unset the current buffer integration with Clink."
   (when-let ((db (and clink-project-root (clink--get-sqlite-database clink-project-root))))
     (sqlite-close db)
@@ -261,7 +268,12 @@ if it is the first call, open it and return the object."
 (define-minor-mode clink-mode
   "Enable Clink integration for the current buffer."
   :lighter " Clink"
-  (if clink-mode (clink-setup) (clink-teardown)))
+  :group 'clink
+  (if clink-mode (clink-turn-on) (clink-turn-off)))
+
+(define-globalized-minor-mode global-clink-mode clink-mode clink-turn-on
+  :group 'clink
+  :predicate)
 
 
 (provide 'clink)
