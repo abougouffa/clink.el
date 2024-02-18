@@ -266,6 +266,7 @@ if it is the first call, open it and return the object."
 ;;;###autoload(autoload 'clink-find-calls "clink" "Find calls" t)
 ;;;###autoload(autoload 'clink-find-reference "clink" "Find reference" t)
 ;;;###autoload(autoload 'clink-find-definition "clink" "Find definition" t)
+;;;###autoload(autoload 'clink-find-includers "clink" "Find includers" t)
 
 (dolist (type '(symbol file callers calls reference definition includers))
   (let ((fn-name (intern (format "clink-find-%s" type)))
