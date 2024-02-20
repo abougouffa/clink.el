@@ -54,7 +54,7 @@
 (defcustom clink-compile-commands-file nil
   "Path to the \"compile_commands.json\" file.
 
-Set to nil to auto-detect the file and fall-back to CScope-based search when not found."
+Set to nil to auto-detect the file or fallback and CScope-based search."
   :type '(choice (const nil) file)
   :group 'clink)
 
@@ -82,6 +82,11 @@ Set to nil to auto-detect the file and fall-back to CScope-based search when not
 See the `:predicate' section of `define-globalized-minor-mode'."
   :group 'clink
   :type '(repeat symbol))
+
+(defcustom clink-show-absolute-paths-in-results nil
+  "Show absolute paths in results."
+  :type 'boolean
+  :group 'clink)
 
 (defvar-local clink-project-root nil
   "Path to the directory containing Clink database (the `clink-database-filename').")
@@ -114,10 +119,11 @@ if it is the first call, open it and return the object."
             db))
       (error "Database not found %S" db-file))))
 
-(defun clink--results-show-in-buffer (buff-name results template &optional root-dir)
+(defun clink--results-show-in-buffer (buff-name results template root-dir)
   (with-current-buffer (get-buffer-create buff-name)
     (read-only-mode -1)
     (delete-region (point-min) (point-max))
+    (setq-local default-directory root-dir) ; for better navigation
     (dolist (result results)
       (let* ((result-alist (cl-mapcar #'cons template result))
              (path (alist-get 'path result-alist))
@@ -127,7 +133,7 @@ if it is the first call, open it and return the object."
              (body (alist-get 'body result-alist)))
         (insert (format
                  "%s%s: %s%s%s\n"
-                 (if root-dir (abbreviate-file-name (expand-file-name path root-dir)) path)
+                 (if clink-show-absolute-paths-in-results (expand-file-name path root-dir) path)
                  (if line (format ":%d" line) "")
                  (if (and parent (not (string-empty-p parent))) (format " P: (%s) " parent) "")
                  (if (and name (not (string-empty-p name))) (format " N: (%s) " name) "")
