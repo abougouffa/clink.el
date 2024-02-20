@@ -351,11 +351,7 @@ if it is the first call, open it and return the object."
 ;;;###autoload
 (define-globalized-minor-mode global-clink-mode clink-mode clink-turn-on
   :group 'clink
-  :predicate)
-
-;; Set the list of global modes to use Clink with
-;;;###autoload
-(setq global-clink-modes '(c-mode c-ts-mode c++-mode c++-ts-mode))
+  :predicate '(c-mode c-ts-mode c++-mode c++-ts-mode))
 
 
 (provide 'clink)
