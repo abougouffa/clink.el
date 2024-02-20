@@ -89,10 +89,8 @@ Set to nil to auto-detect the file or fallback and CScope-based search."
 ;;; Utils and internals
 
 (defvar clink-prompt-symbol-history nil)
-
 (defvar clink-prompt-file-history nil)
-
-(defvar clink-prompt-includers-history nil)
+(defvar clink-root-directory-history nil)
 
 (defvar clink--databases-map (make-hash-table :test 'equal))
 
@@ -242,8 +240,6 @@ if it is the first call, open it and return the object."
 
 ;;; Commands
 
-(defvar clink-root-directory-history nil)
-
 ;;;###autoload
 (defun clink-build-database (&optional root-directory)
   "Build the Clink database under ROOT-DIRECTORY."
@@ -253,8 +249,7 @@ if it is the first call, open it and return the object."
                    (unless current-prefix-arg (clink-find-project-root))
                    (read-directory-name "Root directory to index: " (car clink-root-directory-history))))
               (compile-commands-file (or clink-compile-commands-file (expand-file-name "compile_commands.json")))
-              (proc-name (format "clink-build-database-%s" (substring (md5 (expand-file-name default-directory)) 0 8)))
-              (buff-name (format "*clink-build-database (%s)*" (abbreviate-file-name default-directory)))
+              (buff-name-fn (lambda (_) (format "*clink-build-database (%s)*" (abbreviate-file-name default-directory))))
               (clink-cmd (concat
                           clink-command
                           (when clink-number-of-jobs
@@ -262,15 +257,13 @@ if it is the first call, open it and return the object."
                           " --build-only"
                           " --animation=off"
                           " --syntax-highlighting=lazy"
-                          " --color=never"
                           " --database=" (shell-quote-argument (expand-file-name clink-database-filename))
                           (when (file-exists-p compile-commands-file)
                             (format " --compile-commands=%s" (shell-quote-argument (file-name-directory compile-commands-file)))))))
     (add-to-history 'clink-root-directory-history default-directory)
     (setq-local clink-project-root default-directory)
-    (with-current-buffer (get-buffer-create buff-name)
-      (insert (format "Starting Clink indexing with command:\n%s\n\n===============\n" clink-cmd))
-      (start-process-shell-command proc-name buff-name clink-cmd))))
+    (let ((compilation-buffer-name-function buff-name-fn))
+      (compile clink-cmd))))
 
 ;;;###autoload
 (defun clink-update-database (&optional root-directory)
