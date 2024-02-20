@@ -127,7 +127,7 @@ if it is the first call, open it and return the object."
              (body (alist-get 'body result-alist)))
         (insert (format
                  "%s%s: %s%s%s\n"
-                 (if root-dir (expand-file-name path root-dir) path)
+                 (if root-dir (abbreviate-file-name (expand-file-name path root-dir)) path)
                  (if line (format ":%d" line) "")
                  (if (and parent (not (string-empty-p parent))) (format " P: (%s) " parent) "")
                  (if (and name (not (string-empty-p name))) (format " N: (%s) " name) "")
