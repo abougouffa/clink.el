@@ -239,7 +239,8 @@ if it is the first call, open it and return the object."
 
 (defun clink-find-project-root ()
   "Search recursively until we find one of `clink-root-project-detection-files'."
-  (clink--directory-root-containing-file clink-root-project-detection-files))
+  (or clink-project-root
+      (clink--directory-root-containing-file clink-root-project-detection-files)))
 
 ;;; Commands
 
