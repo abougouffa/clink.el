@@ -75,14 +75,6 @@ Set to nil to auto-detect the file or fallback and CScope-based search."
   :type '(repeat string)
   :group 'clink)
 
-;;;###autoload
-(defcustom global-clink-modes '(c-mode c-ts-mode c++-mode c++-ts-mode)
-  "A predicate list of major modes to use with `global-clink-mode'.
-
-See the `:predicate' section of `define-globalized-minor-mode'."
-  :group 'clink
-  :type '(repeat symbol))
-
 (defcustom clink-show-absolute-paths-in-results nil
   "Show absolute paths in results."
   :type 'boolean
@@ -344,13 +336,15 @@ if it is the first call, open it and return the object."
   (when-let* ((root (clink-find-project-root))
               (clink-db (expand-file-name clink-database-filename root))
               (db-exists (file-exists-p clink-db)))
-    (setq-local clink-project-root root)))
+    (setq-local clink-project-root root))
+  (setq-local clink-mode t))
 
 (defun clink-turn-off ()
   "Unset the current buffer integration with Clink."
   (when-let ((db (and clink-project-root (clink--get-sqlite-database clink-project-root))))
     (sqlite-close db)
-    (remhash (expand-file-name clink-project-root) clink--databases-map)))
+    (remhash (expand-file-name clink-project-root) clink--databases-map))
+  (setq-local clink-mode nil))
 
 ;;; Modes
 
@@ -365,6 +359,10 @@ if it is the first call, open it and return the object."
 (define-globalized-minor-mode global-clink-mode clink-mode clink-turn-on
   :group 'clink
   :predicate)
+
+;; Set the list of global modes to use Clink with
+;;;###autoload
+(setq global-clink-modes '(c-mode c-ts-mode c++-mode c++-ts-mode))
 
 
 (provide 'clink)
