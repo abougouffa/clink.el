@@ -51,6 +51,13 @@
   :type '(choice (const nil) natnum)
   :group 'clink)
 
+(defcustom clink-compile-commands-file nil
+  "Path to the \"compile_commands.json\" file.
+
+Set to nil to auto-detect the file and fall-back to CScope-based search when not found."
+  :type '(choice (const nil) file)
+  :group 'clink)
+
 (defcustom clink-parse-modes-alist '((asm . generic)
                                      (c . auto)
                                      (cxx . auto)
@@ -68,6 +75,7 @@
   :type '(repeat string)
   :group 'clink)
 
+;;;###autoload
 (defcustom global-clink-modes '(c-mode c-ts-mode c++-mode c++-ts-mode)
   "A predicate list of major modes to use with `global-clink-mode'.
 
@@ -235,23 +243,47 @@ if it is the first call, open it and return the object."
 
 ;;; Commands
 
+(defvar clink-root-directory-history nil)
+
 ;;;###autoload
-(defun clink-build-database (root-directory)
+(defun clink-build-database (&optional root-directory)
   "Build the Clink database under ROOT-DIRECTORY."
-  (interactive "D")
-  (user-error "Not implemented yet"))
+  (interactive "P")
+  (when-let* ((default-directory
+               (or root-directory
+                   (unless current-prefix-arg (clink-find-project-root))
+                   (read-directory-name "Root directory to index: " (car clink-root-directory-history))))
+              (compile-commands-file (or clink-compile-commands-file (expand-file-name "compile_commands.json")))
+              (proc-name (format "clink-build-database-%s" (substring (md5 (expand-file-name default-directory)) 0 8)))
+              (buff-name (format "*clink-build-database (%s)*" (abbreviate-file-name default-directory)))
+              (clink-cmd (concat
+                          clink-command
+                          (when clink-number-of-jobs
+                            (format " --jobs=%d" clink-number-of-jobs))
+                          " --build-only"
+                          " --animation=off"
+                          " --syntax-highlighting=lazy"
+                          " --color=never"
+                          " --database=" (shell-quote-argument (expand-file-name clink-database-filename))
+                          (when (file-exists-p compile-commands-file)
+                            (format " --compile-commands=%s" (shell-quote-argument (file-name-directory compile-commands-file)))))))
+    (add-to-history 'clink-root-directory-history default-directory)
+    (setq-local clink-project-root default-directory)
+    (with-current-buffer (get-buffer-create buff-name)
+      (insert (format "Starting Clink indexing with command:\n%s\n\n===============\n" clink-cmd))
+      (start-process-shell-command proc-name buff-name clink-cmd))))
 
 ;;;###autoload
-(defun clink-update-database (root-directory)
+(defun clink-update-database (&optional root-directory)
   "Update the Clink database under ROOT-DIRECTORY."
-  (interactive "D")
-  (user-error "Not implemented yet"))
+  (interactive)
+  (clink-build-database root-directory))
 
 ;;;###autoload
-(defun clink-open-database-dir (&optional root-directory)
-  "Find Clink database starting from ROOT-DIRECTORY."
+(defun clink-open-database-directory-in-dired (&optional root-directory)
+  "Open the Clink database directory in Dired, starting from ROOT-DIRECTORY."
   (interactive)
-  (when-let ((dir (or (and clink-project-root (file-exists-p clink-project-root) (file-name-directory clink-project-root))
+  (when-let ((dir (or (and clink-project-root (file-exists-p (expand-file-name clink-database-filename clink-project-root)) clink-project-root)
                       (clink--directory-root-containing-file clink-root-project-detection-files root-directory))))
     (dired dir)))
 
@@ -262,7 +294,7 @@ if it is the first call, open it and return the object."
   (let* ((dir (or (and clink-project-root (file-exists-p (expand-file-name clink-database-filename clink-project-root)) clink-project-root)
                   (clink-find-project-root)))
          (set-dir (read-directory-name "Select database directory: " dir)))
-    (setq-local clink-project-root (expand-file-name clink-database-filename set-dir))))
+    (setq-local clink-project-root set-dir)))
 
 ;;;###autoload(autoload 'clink-find-symbol "clink" "Find symbol" t)
 ;;;###autoload(autoload 'clink-find-file "clink" "Find file" t)
@@ -285,7 +317,7 @@ if it is the first call, open it and return the object."
 
 (defun clink-internal-find (type args)
   "Find TYPE with ARGS."
-  (let ((root-dir (file-name-directory clink-project-root))
+  (let ((root-dir clink-project-root)
         (plist (plist-get clink--queries-plist (intern (format ":%s" type))))
         (args (ensure-list args)))
     (clink--results-show-in-buffer
@@ -305,7 +337,7 @@ if it is the first call, open it and return the object."
   (when-let* ((root (clink-find-project-root))
               (clink-db (expand-file-name clink-database-filename root))
               (db-exists (file-exists-p clink-db)))
-    (setq-local clink-project-root clink-db)))
+    (setq-local clink-project-root root)))
 
 (defun clink-turn-off ()
   "Unset the current buffer integration with Clink."
