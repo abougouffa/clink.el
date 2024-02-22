@@ -58,6 +58,11 @@ Set to nil to auto-detect the file or fallback and CScope-based search."
   :type '(choice (const nil) file)
   :group 'clink)
 
+(defcustom clink-list-of-files-to-index nil
+  "The file name of the list of files to be indexed."
+  :type '(choice (const nil) file)
+  :group 'clink)
+
 (defcustom clink-parse-modes-alist '((asm . generic)
                                      (c . auto)
                                      (cxx . auto)
@@ -249,6 +254,7 @@ if it is the first call, open it and return the object."
                    (unless current-prefix-arg (clink-find-project-root))
                    (read-directory-name "Root directory to index: " (car clink-root-directory-history))))
               (compile-commands-file (or clink-compile-commands-file (expand-file-name "compile_commands.json")))
+              (list-of-files (or clink-list-of-files-to-index (let ((f (expand-file-name "clink.files"))) (if (file-exists-p f) f (expand-file-name "cscope.files")))))
               (buff-name-fn (lambda (_) (format "*clink-build-database (%s)*" (abbreviate-file-name default-directory))))
               (clink-cmd (concat
                           clink-command
@@ -258,6 +264,8 @@ if it is the first call, open it and return the object."
                           " --animation=off"
                           " --syntax-highlighting=lazy"
                           " --database=" (shell-quote-argument (expand-file-name clink-database-filename))
+                          (when (file-exists-p list-of-files)
+                            (format " -i %s" (shell-quote-argument list-of-files)))
                           (when (file-exists-p compile-commands-file)
                             (format " --compile-commands=%s" (shell-quote-argument (file-name-directory compile-commands-file)))))))
     (add-to-history 'clink-root-directory-history default-directory)
