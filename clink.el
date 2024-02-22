@@ -243,6 +243,32 @@ if it is the first call, open it and return the object."
   (or clink-project-root
       (clink--directory-root-containing-file clink-root-project-detection-files)))
 
+(defvar clink-recursive-files-list t)
+(defvar clink-files-list-suffixes '("*.[chly]" "*.[ch]xx" "*.[ch]pp" "*.[ch]++" "*.cc" "*.hh"))
+(defvar clink-files-list-ignored-directories '("CVS" "RCS" "SCCS" ".git" ".hg" ".bzr" ".cdv" ".pc" ".svn" ".repo" "_MTN" "_darcs" "_sgbak" "debian"))
+
+(defun clink-find-files-command (&optional dir)
+  "Return the complete find command in DIR."
+  (let* ((default-directory (or dir default-directory)))
+    (concat
+     "echo 'Creating list of files to index ...'\n"
+     (find-cmd
+      (unless clink-recursive-files-list '(maxdepth "1"))
+      `(prune (and (type "d") (name ,@clink-files-list-ignored-directories)))
+      `(iname ,@clink-files-list-suffixes)
+      '(type "f" "l")
+      '(print))
+     " | "
+     "sed -e 's/\\([\"]\\)/\\\\\\1/g' -e 's/\\(.*\\)/\"\\1\"/g'" ;;  \\t
+     " > clink.files\n"
+     "echo 'Creating list of files to index ... done'\n")))
+
+(defun clink-create-list-of-files-to-index (top-directory)
+  "Create a list of files to index in TOP-DIRECTORY."
+  (interactive "DCreate file list in directory: ")
+  (let* ((default-directory top-directory))
+    (start-process-shell-command "clink-files-list" "*clink-files-list*" (clink-find-files-command))))
+
 ;;; Commands
 
 ;;;###autoload
