@@ -81,7 +81,7 @@ Set to nil to auto-detect the file or fallback and CScope-based search."
   :type 'alist
   :group 'clink)
 
-(defcustom clink-root-project-detection-files '(".tags/" ".repo/" ".clink.db")
+(defcustom clink-root-project-detection-files '(".tags" ".repo" ".clink.db")
   "A list of files/directories that indicates the root of a workspace."
   :type '(repeat string)
   :group 'clink)
@@ -230,14 +230,15 @@ if it is the first call, open it and return the object."
   "Like `apply-partially', but apply the ARGS to the right of FUN."
   (lambda (&rest args2) (apply fun (append args2 args))))
 
-(defun clink--directory-root-containing-file (files &optional start-path)
+(defun clink--locate-dominating-files (files &optional start-path)
   "Return the path containing a file from FILES starting from START-PATH."
-  (let ((dir (or start-path (and buffer-file-name (file-name-directory buffer-file-name)) default-directory)))
-    (catch 'root
-      (while dir
-        (when (cl-some #'file-exists-p (mapcar (clink--apply-partially-right #'expand-file-name dir) (ensure-list files)))
-          (throw 'root dir))
-        (setq dir (file-name-parent-directory dir))))))
+  (locate-dominating-file
+   start-path
+   (lambda (dir)
+     (directory-files
+      (file-name-directory dir)
+      nil
+      (rx-to-string `(seq bol (or ,@files) eol))))))
 
 (with-eval-after-load 'savehist
   (push 'clink-prompt-symbol-history savehist-additional-variables))
@@ -247,7 +248,7 @@ if it is the first call, open it and return the object."
 (defun clink-find-project-root ()
   "Search recursively until we find one of `clink-root-project-detection-files'."
   (or clink-project-root
-      (clink--directory-root-containing-file clink-root-project-detection-files)))
+      (clink--locate-dominating-files clink-root-project-detection-files)))
 
 (defvar clink-recursive-files-list t)
 (defvar clink-files-list-suffixes '("*.[chly]" "*.[ch]xx" "*.[ch]pp" "*.[ch]++" "*.cc" "*.hh"))
@@ -316,7 +317,7 @@ if it is the first call, open it and return the object."
   "Open the Clink database directory in Dired, starting from ROOT-DIRECTORY."
   (interactive)
   (when-let ((dir (or (and clink-project-root (file-exists-p (expand-file-name clink-database-filename clink-project-root)) clink-project-root)
-                      (clink--directory-root-containing-file clink-root-project-detection-files root-directory))))
+                      (clink--locate-dominating-files clink-root-project-detection-files root-directory))))
     (dired dir)))
 
 ;;;###autoload
