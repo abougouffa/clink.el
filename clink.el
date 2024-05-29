@@ -37,7 +37,7 @@
 
 (require 'sqlite)
 (require 'grep)
-(require 'cl-extra)
+(require 'cl-lib)
 (eval-when-compile (require 'savehist))
 
 (defgroup clink nil
@@ -237,7 +237,8 @@ if it is the first call, open it and return the object."
       (rx-to-string `(seq bol (or ,@files) eol))))))
 
 (with-eval-after-load 'savehist
-  (push 'clink-prompt-symbol-history savehist-additional-variables))
+  (cl-callf append savehist-additional-variables
+    '(clink-prompt-symbol-history clink-prompt-file-history clink-root-directory-history)))
 
 ;;; Functions
 
