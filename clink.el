@@ -226,10 +226,6 @@ if it is the first call, open it and return the object."
               "SELECT DISTINCT path FROM records WHERE path = ? OR " ;; filename
               "PATH LIKE ? ORDER BY path")))) ;; pattern
 
-(defun clink--apply-partially-right (fun &rest args)
-  "Like `apply-partially', but apply the ARGS to the right of FUN."
-  (lambda (&rest args2) (apply fun (append args2 args))))
-
 (defun clink--locate-dominating-files (files &optional start-path)
   "Return the path containing a file from FILES starting from START-PATH."
   (locate-dominating-file
