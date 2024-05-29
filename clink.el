@@ -264,7 +264,9 @@ if it is the first call, open it and return the object."
       '(print))
      " | "
      "sed -e 's/\\([\"]\\)/\\\\\\1/g' -e 's/\\(.*\\)/\"\\1\"/g'" ;;  \\t
-     " > clink.files\n"
+     " > "
+     (or clink-list-of-files-to-index "clink.files")
+     "\n"
      "echo 'Creating list of files to index ... done'\n")))
 
 (defun clink-create-list-of-files-to-index (top-directory)
