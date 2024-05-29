@@ -233,7 +233,7 @@ if it is the first call, open it and return the object."
 (defun clink--locate-dominating-files (files &optional start-path)
   "Return the path containing a file from FILES starting from START-PATH."
   (locate-dominating-file
-   start-path
+   (or start-path default-directory)
    (lambda (dir)
      (directory-files
       (file-name-directory dir)
