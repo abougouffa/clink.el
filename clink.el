@@ -226,16 +226,6 @@ if it is the first call, open it and return the object."
               "SELECT DISTINCT path FROM records WHERE path = ? OR " ;; filename
               "PATH LIKE ? ORDER BY path")))) ;; pattern
 
-(defun clink--locate-dominating-files (files &optional start-path)
-  "Return the path containing a file from FILES starting from START-PATH."
-  (locate-dominating-file
-   (or start-path default-directory)
-   (lambda (dir)
-     (directory-files
-      (file-name-directory dir)
-      nil
-      (rx-to-string `(seq bol (or ,@files) eol))))))
-
 (with-eval-after-load 'savehist
   (cl-callf append savehist-additional-variables
     '(clink-prompt-symbol-history clink-prompt-file-history clink-root-directory-history)))
@@ -245,7 +235,7 @@ if it is the first call, open it and return the object."
 (defun clink-find-project-root ()
   "Search recursively until we find one of `clink-root-project-detection-files'."
   (or clink-project-root
-      (clink--locate-dominating-files clink-root-project-detection-files)))
+      (cl-some (apply-partially #'locate-dominating-file default-directory) clink-root-project-detection-files)))
 
 (defvar clink-recursive-files-list t)
 (defvar clink-files-list-suffixes '("*.[chly]" "*.[ch]xx" "*.[ch]pp" "*.[ch]++" "*.cc" "*.hh"))
@@ -316,7 +306,7 @@ if it is the first call, open it and return the object."
   "Open the Clink database directory in Dired, starting from ROOT-DIRECTORY."
   (interactive)
   (when-let ((dir (or (and clink-project-root (file-exists-p (expand-file-name clink-database-filename clink-project-root)) clink-project-root)
-                      (clink--locate-dominating-files clink-root-project-detection-files root-directory))))
+                      (cl-some (apply-partially #'locate-dominating-file (or root-directory default-directory)) clink-root-project-detection-files))))
     (dired dir)))
 
 ;;;###autoload
